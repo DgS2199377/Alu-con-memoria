@@ -1,0 +1,148 @@
+#define MAX_RESULTADOS 4
+
+int A, B, C, D;
+
+int resultados[MAX_RESULTADOS];
+int indice = 0;
+
+void imprimirResultado(int resultado) {
+  Serial.print("Resultado: ");
+  Serial.println(resultado);
+}
+
+void imprimirResultados() {
+  Serial.println("Resultados almacenados:");
+  for (int i = 0; i < MAX_RESULTADOS; i++) {
+    Serial.print("R");
+    Serial.print(i + 1);
+    Serial.print(": ");
+    Serial.print(resultados[i]);
+    Serial.print(" ");
+  }
+  Serial.println();
+}
+
+void guardarResultado(int resultado) {
+  resultados[indice] = resultado;
+  indice = (indice + 1) % MAX_RESULTADOS;
+}
+
+int obtenerValorDesdeRegistro(char registro) {
+  switch (registro) {
+    case '1':
+      return resultados[0];
+    case '2':
+      return resultados[1];
+    case '3':
+      return resultados[2];
+    case '4':
+      return resultados[3];
+    default:
+      return 0;  // Valor predeterminado si el registro no es válido
+  }
+}
+
+void ejecutarOperacionAritmetica(char operador, int operando1, int operando2) {
+  int resultado = 0;
+  switch (operador) {
+    case '+':
+      resultado = operando1 + operando2;
+      break;
+    case '-':
+      resultado = operando1 - operando2;
+      break;
+    case '*':
+      resultado = operando1 * operando2;
+      break;
+    case '/':
+      if (operando2 != 0) {
+        resultado = operando1 / operando2;
+      } else {
+        Serial.println("Error: División por cero");
+        return;
+      }
+      break;
+    default:
+      Serial.println("Operador no válido");
+      return;
+  }
+
+  // Imprimir resultado en el serial
+  imprimirResultado(resultado);
+
+  // Guardar resultado en el arreglo
+  guardarResultado(resultado);
+}
+
+void ejecutarOperacionLogica(const char* operador, int operando1, int operando2) {
+  int resultado = 0;
+
+  if (strcmp(operador, "&&") == 0) {
+    resultado = operando1 && operando2;
+  } else if (strcmp(operador, "||") == 0) {
+    resultado = operando1 || operando2;
+  } else if (strcmp(operador, "^") == 0) {
+    resultado = operando1 != operando2;  // XOR: resultado es verdadero si los operandos son diferentes
+  } else {
+    Serial.println("Operador no válido");
+    return;
+  }
+
+  // Imprimir resultado en el serial antes de los registros guardados
+  imprimirResultado(resultado);
+
+  // Guardar resultado en el arreglo
+  guardarResultado(resultado);
+}
+
+void setup() {
+  Serial.begin(9600);
+  while (!Serial)
+    ;
+}
+
+void loop() {
+  String input;
+
+  while (Serial.available() > 0) {
+    char discardChar = Serial.read();
+  }
+
+  while (Serial.available() == 0)
+    ;
+
+  input = Serial.readStringUntil('\n');
+  input.trim();
+
+  char operador[3]; // Incrementar el tamaño para "&&" y "||"
+  if (sscanf(input.c_str(), "%1d %1d %2s %1d %1d", &A, &B, operador, &C, &D) == 5) {
+    if (strcmp(operador, "&&") == 0 || strcmp(operador, "||") == 0 || strcmp(operador, "^") == 0) {
+      // Operación lógica
+      ejecutarOperacionLogica(operador, (A * 2 + B), (C * 2 + D));
+    } else {
+      // Operación aritmética
+      ejecutarOperacionAritmetica(operador[0], (A * 2 + B), (C * 2 + D));
+    }
+
+    // Imprimir resultados después de todas las operaciones
+    imprimirResultados();
+  } else if (sscanf(input.c_str(), "R%c %c R%c", &A, operador, &B) == 3) {
+    // Operación con registros
+    int valorA = obtenerValorDesdeRegistro(A);
+    int valorB = obtenerValorDesdeRegistro(B);
+
+    if (strcmp(operador, "&&") == 0 || strcmp(operador, "||") == 0 || strcmp(operador, "^") == 0) {
+      // Operación lógica
+      ejecutarOperacionLogica(operador, valorA, valorB);
+    } else {
+      // Operación aritmética
+      ejecutarOperacionAritmetica(operador[0], valorA, valorB);
+    }
+
+    // Imprimir resultados después de todas las operaciones
+    imprimirResultados();
+  } else {
+    Serial.println("Entrada no válida. Use el formato 'AB operador CD' o 'Rn operador Rm'");
+  }
+}
+
